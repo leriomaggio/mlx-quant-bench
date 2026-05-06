@@ -1,0 +1,34 @@
+# Models and data
+models/
+results/
+*.jsonl
+*.safetensors
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+.venv/
+venv/
+env/
+*.egg-info/
+build/
+dist/
+
+# Environment
+.env
+
+# IDE
+.vscode/
+.idea/
+*.swp
+.DS_Store
+
+# Reports (keep one example, ignore the rest)
+REPORT.md
+!docs/REPORT_example.md
+
+# Hugging Face cache (if anyone sets it inside the repo)
+.cache/
