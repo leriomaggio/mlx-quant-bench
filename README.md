@@ -8,17 +8,31 @@ Compare loaded memory, time-to-first-token, decode throughput, and output qualit
 
 Quantization is the single most-effective production optimisation for self-hosted LLMs: typically a 4× memory reduction at a marginal quality cost. But the trade-offs are model and task-specific, and the canonical tutorials don't actually show you the numbers on your hardware. This repo runs the comparison end-to-end on your Mac and produces a report you can read in five minutes.
 
-The benchmark distinguishes three prompt categories: factual, reasoning, instruction-following - because precision degradation hits each one differently. 
-Factual recall holds up to 4-bit easily; multi-step reasoning starts breaking earlier; instruction-following format compliance is often the first thing to go at 3-bit.
+The benchmark distinguishes three prompt categories - factual, reasoning, instruction-following - because precision degradation hits each one differently. 
+Factual recall holds up to 4-bit easily; multi-step reasoning starts breaking earlier; instruction-following format compliance is often the first thing to go at 3-bit. 
 
-## Example output (Mistral 7B Instruct v0.3 on M3 Pro)
+On the headline run with `Mistral 7B Instruct v0.3`, the surprising finding was that 4-bit *outperformed* 8-bit on speed without any visible quality cost: quantization on Apple Silicon turns out to be a strictly memory-and-speed win for this model, not a quality trade-off.
+
+## Example output (Mistral 7B Instruct v0.3 on M3 Pro / 36 GB)
 
 | Model | Peak memory | Load time | Avg TTFT | Avg tok/s |
 |---|---|---|---|---|
-| **8bit** | 9.0 GB | 7.0s | 0.20s | 30.5 |
-| **4bit** | 4.5 GB | 5.2s | 0.15s | 46.0 |
+| **bf16** | 14.60 GB | 4.0s | 0.66s | 8.5 |
+| **8bit** | 7.86 GB | 1.6s | 0.28s | 15.1 |
+| **4bit** | 4.29 GB | 0.9s | 0.23s | 27.0 |
+| **3bit** | 3.40 GB | 0.6s | 0.23s | 32.9 |
 
-> Numbers are illustrative — your run will differ based on hardware, prompt length, and MLX version. See `docs/REPORT_example.md` for a full annotated example.
+Three findings worth flagging:
+
+1. **Memory and speed scale together, almost linearly.** Each precision step roughly halves both memory and time-per-token. That's not coincidence — it's empirical confirmation that memory bandwidth is the dominant bottleneck for token generation on M-series GPUs, not compute. Quantization on Apple Silicon is a strict win on both axes simultaneously.
+
+2. **Quality degradation hits instruction-following before factual recall.** Across the prompt suite, factual prompts and reasoning chains held up to 3-bit. The first visible breaks were on `bullet_summary` (3-bit produced 5 bullets when asked for exactly 3) and `negation` (3-bit produced self-contradicting output, calling the platypus both "not a mammal" and "a mammal" in the same answer). That's the textbook narrative made concrete.
+
+3. **Single-sample variance dominates precision-induced quality differences on this prompt suite.** On the `age_puzzle` reasoning prompt, bf16 and 8-bit both got the answer wrong (equation setup error) while 4-bit and 3-bit got it right. That's almost certainly stochastic, not precision-related, and it's a clean reminder that rigorous quality assessment of quantization needs many samples per prompt and statistical tests, not eyeball comparison on a 10-prompt suite.
+
+See [`docs/REPORT_full_models.md`](docs/REPORT_full_models.md) for the full per-prompt outputs side-by-side.
+
+The [`docs/REPORT_m3pro.md`](docs/REPORT_m3pro.md) contains the report run on the same hardware but limited to the prebuilt `Mistral7B` models as provided by the `mlx_community` on Hugging Face (i.e. 8bit and 4bit).
 
 ## Quick start
 
@@ -223,5 +237,5 @@ MIT — see [LICENSE](LICENSE).
 
 ## Author
 
-Valerio Maggio, Senior Technical Advocate / Developer Advocate.
+Valerio Maggio, Senior Developer Advocate.
 [github.com/leriomaggio](https://github.com/leriomaggio) · [linkedin.com/in/valeriomaggio](https://linkedin.com/in/valeriomaggio)
